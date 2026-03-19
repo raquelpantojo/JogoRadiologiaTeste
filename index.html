@@ -386,3 +386,506 @@
     </script>
 </body>
 </html>
+Nayara Silva<nayara.stz@hotmail.com>
+
+​
+Raquel Pantojo de Souza Bachour​
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radiology Physics Master - Nayara (FATESA)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+        .panel-glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gantry-ring {
+            width: 280px;
+            height: 280px;
+            border: 12px solid #334155;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.5);
+        }
+        .tube-rotation-wrapper {
+            position: absolute;
+            inset: -12px;
+            display: flex;
+            justify-content: center;
+        }
+        .tube {
+            position: absolute;
+            width: 44px;
+            height: 28px;
+            background: #475569;
+            top: 0;
+            border-radius: 6px;
+            border: 2px solid #06b6d4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+            font-weight: bold;
+        }
+        .xray-cone {
+            position: absolute;
+            top: 28px;
+            left: 50%;
+            width: 140px;
+            height: 160px;
+            background: linear-gradient(to bottom, rgba(255, 255, 0, 0.25), transparent);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            transform-origin: top center;
+            transform: translateX(-50%);
+            display: none;
+        }
+        .scanning .xray-cone { display: block; }
+        .scanning .tube-rotation-wrapper { animation: rotate-gantry 1.2s linear infinite; }
+        
+        @keyframes rotate-gantry {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .monitor-screen {
+            background: #000;
+            border: 10px solid #1e293b;
+            border-radius: 4px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,1);
+        }
+
+        /* Estilos dos Botões de Parâmetros */
+        .param-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 8px 4px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        .param-btn.active {
+            background: #0891b2;
+            color: white;
+            border-color: #06b6d4;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+        }
+        .param-btn:hover:not(.active) {
+            background: #334155;
+            color: white;
+        }
+
+        /* Estilos da Página de Início */
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        .start-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            padding: 3rem;
+            border-radius: 2rem;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 0 60px rgba(6, 182, 212, 0.1);
+        }
+        .fatesa-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #06b6d4;
+            letter-spacing: -2px;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <!-- PÁGINA DE INÍCIO -->
+    <div id="start-screen">
+        <div class="start-card animate-in fade-in zoom-in duration-700">
+            <div class="fatesa-logo italic uppercase">FATESA</div>
+            <h1 class="text-white text-xl font-light tracking-[0.3em] mb-2 uppercase">Radiology Physics Master</h1>
+            <div class="h-px w-24 bg-cyan-500 mx-auto mb-6"></div>
+            
+            <div class="space-y-4 mb-10 text-slate-400 text-sm">
+                <p>Bem-vinda ao simulador avançado de Tomografia Computadorizada.</p>
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 text-left">
+                    <p class="text-cyan-400 font-bold mb-2 text-xs uppercase">Perfil do Utilizador:</p>
+                    <p class="text-white text-base">Nayara</p>
+                    <p class="text-xs">4º Semestre • Tecnologia em Radiologia</p>
+                </div>
+                <p class="text-[10px] leading-relaxed italic">Configura os parâmetros físicos através dos botões da consola para análise de qualidade e dose.</p>
+            </div>
+
+            <button onclick="startGame()" class="group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-full transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em] overflow-hidden">
+                <span class="relative z-10">Iniciar Consola</span>
+                <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTEÚDO PRINCIPAL (APP) -->
+    <div id="app-content" class="max-w-7xl mx-auto transition-all duration-1000 blur-md scale-95 opacity-0">
+        <!-- Cabeçalho Personalizado FATESA -->
+        <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-3xl font-black text-cyan-500 tracking-tighter uppercase leading-none italic">Radiology Physics Master</h1>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="bg-cyan-950 text-cyan-400 text-[10px] font-bold px-2 py-0.5 rounded border border-cyan-800 uppercase">Tecnóloga: Nayara</span>
+                    <span class="text-slate-400 text-[10px] font-bold tracking-widest uppercase">FATESA • 4º Semestre</span>
+                </div>
+            </div>
+            <div class="flex flex-col items-end">
+                <div class="flex gap-4 mb-2">
+                    <div class="text-right">
+                        <p class="text-[9px] text-slate-500 uppercase font-bold">Protocolo de Segurança</p>
+                        <p id="total-dose-display" class="text-xs font-mono text-white">Dose: 0.00 mGy</p>
+                    </div>
+                </div>
+                <div class="w-48 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="safety-bar" class="w-full h-full bg-cyan-500 transition-all duration-700"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- COLUNA ESQUERDA: PARÂMETROS (COM BOTÕES AGORA) -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="panel-glass p-5 rounded-2xl shadow-2xl">
+                    <h2 class="text-xs font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-cyan-500 rounded-full"></span> Consola de Operação
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <!-- Seleção de kV -->
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-bold mb-3 tracking-wider">Tensão do Tubo (kV)</p>
+                            <div class="grid grid-cols-4 gap-2" id="kv-container">
+                                <button onclick="setKV(80)" class="param-btn">80</button>
+                                <button onclick="setKV(100)" class="param-btn">100</button>
+                                <button onclick="setKV(120)" class="param-btn active">120</button>
+                                <button onclick="setKV(140)" class="param-btn">140</button>
+                            </div>
+                        </div>
+
+                        <!-- Seleção de mAs -->
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-bold mb-3 tracking-wider">Corrente x Tempo (mAs)</p>
+                            <div class="grid grid-cols-3 gap-2" id="mas-container">
+                                <button onclick="setMAS(50)" class="param-btn">50</button>
+                                <button onclick="setMAS(100)" class="param-btn">100</button>
+                                <button onclick="setMAS(200)" class="param-btn active">200</button>
+                                <button onclick="setMAS(300)" class="param-btn">300</button>
+                                <button onclick="setMAS(450)" class="param-btn">450</button>
+                                <button onclick="setMAS(600)" class="param-btn">600</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-400 uppercase font-bold mb-3 block tracking-wider">Algoritmo (Kernel)</label>
+                            <select id="kernel-input" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:ring-1 focus:ring-cyan-500 outline-none">
+                                <option value="soft">Soft (Tecidos Moles)</option>
+                                <option value="standard" selected>Standard (Padrão)</option>
+                                <option value="bone">Sharp (Ósseo - Alta Freq.)</option>
+                            </select>
+                        </div>
+
+                        <button id="btn-scan" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em]">
+                            Efetuar Varredura
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-glass p-5 rounded-2xl">
+                    <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Janelamento Manual</h2>
+                    <div class="space-y-4">
+                         <div class="flex flex-col gap-2">
+                            <button onclick="setWindow(400, 40)" class="text-[10px] bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700 transition-colors">🧠 Crânio</button>
+                            <button onclick="setWindow(1500, -600)" class="text-[10px] bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700 transition-colors">🫁 Tórax</button>
+                        </div>
+                        <div class="border-t border-slate-800 pt-3">
+                             <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block mb-1 uppercase">WW</label>
+                                    <input type="number" id="ww-input" value="400" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block mb-1 uppercase">WL</label>
+                                    <input type="number" id="wl-input" value="40" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTRO: SIMULAÇÃO GANTRY -->
+            <div class="lg:col-span-5 flex flex-col items-center justify-start space-y-8">
+                <div class="gantry-ring" id="gantry-visual">
+                    <div class="tube-rotation-wrapper">
+                        <div class="tube">
+                            KV/MA
+                            <div class="xray-cone"></div>
+                        </div>
+                    </div>
+                    <!-- Fantoma -->
+                    <div class="relative z-10 w-40 h-40 bg-slate-800 rounded-full flex flex-col items-center justify-center border-8 border-slate-700 shadow-inner overflow-hidden">
+                         <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle,_#06b6d4_1px,_transparent_1px)] bg-[size:15px_15px]"></div>
+                         <div class="text-[10px] text-cyan-500/80 font-black uppercase text-center leading-tight tracking-widest">Amostra<br>FATESA</div>
+                    </div>
+                </div>
+
+                <div class="w-full grid grid-cols-3 gap-4">
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-yellow-500/50">
+                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">CTDIvol (mGy)</p>
+                        <p id="stat-dose" class="text-2xl font-mono font-bold text-yellow-500">0.00</p>
+                    </div>
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-cyan-500/50">
+                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">Ruído (SD)</p>
+                        <p id="stat-noise" class="text-2xl font-mono font-bold text-cyan-400">0.0</p>
+                    </div>
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-emerald-500/50">
+                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">CNR Real</p>
+                        <p id="stat-cnr" class="text-2xl font-mono font-bold text-emerald-400">--</p>
+                    </div>
+                </div>
+
+                <div class="panel-glass p-4 rounded-xl w-full border border-slate-800">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase mb-2">Física Aplicada (Nayara):</h4>
+                    <p id="physics-lesson" class="text-[11px] text-slate-400 italic">Configure os parâmetros e inicie a aquisição.</p>
+                </div>
+            </div>
+
+            <!-- DIREITA: RESULTADO -->
+            <div class="lg:col-span-4 flex flex-col space-y-4">
+                <div class="monitor-screen aspect-square overflow-hidden bg-black">
+                    <canvas id="view-canvas" width="512" height="512" class="w-full h-full"></canvas>
+                    <div id="scan-overlay" class="absolute inset-0 bg-black/95 flex items-center justify-center hidden">
+                        <div class="text-center">
+                            <div class="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p class="text-cyan-500 font-mono text-[9px] tracking-[0.4em] uppercase">Processando DICOM...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-glass p-6 rounded-2xl flex-grow border-l-4 border-cyan-500">
+                    <h3 class="text-xs font-black text-cyan-400 mb-4 uppercase tracking-[0.2em]">Relatório Técnico (FATESA)</h3>
+                    <div id="report-text" class="text-[11px] space-y-3 text-slate-300">
+                        <p>Bem-vinda, Nayara. O sistema de simulação de 4º semestre está operacional.</p>
+                        <ul class="list-disc ml-4 space-y-1 text-slate-500 font-medium">
+                            <li>Analise o compromisso entre Dose e Ruído.</li>
+                            <li>Observe a influência do Kernel na resolução.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado Global dos Parâmetros
+        let currentKV = 120;
+        let currentMAS = 200;
+
+        function startGame() {
+            const startScreen = document.getElementById('start-screen');
+            const appContent = document.getElementById('app-content');
+            startScreen.style.opacity = '0';
+            startScreen.style.visibility = 'hidden';
+            appContent.classList.remove('blur-md', 'scale-95', 'opacity-0');
+            appContent.classList.add('blur-none', 'scale-100', 'opacity-100');
+        }
+
+        // Funções para definir os parâmetros via botões
+        function setKV(val) {
+            currentKV = val;
+            updateButtonVisuals('kv-container', val);
+            if (currentHUBuffer) renderImage();
+        }
+
+        function setMAS(val) {
+            currentMAS = val;
+            updateButtonVisuals('mas-container', val);
+            if (currentHUBuffer) renderImage();
+        }
+
+        function updateButtonVisuals(containerId, activeVal) {
+            const container = document.getElementById(containerId);
+            const buttons = container.querySelectorAll('button');
+            buttons.forEach(btn => {
+                if (parseInt(btn.innerText) === activeVal) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        const canvas = document.getElementById('view-canvas');
+        const ctx = canvas.getContext('2d');
+        const kernelInput = document.getElementById('kernel-input');
+        const wwInput = document.getElementById('ww-input');
+        const wlInput = document.getElementById('wl-input');
+        const btnScan = document.getElementById('btn-scan');
+        const overlay = document.getElementById('scan-overlay');
+        const safetyBar = document.getElementById('safety-bar');
+
+        let currentHUBuffer = null;
+        let cumulativeDose = 0;
+
+        function setWindow(ww, wl) {
+            wwInput.value = ww;
+            wlInput.value = wl;
+            if (currentHUBuffer) renderImage();
+        }
+
+        // Listeners para inputs numéricos de janela
+        wwInput.oninput = () => { if (currentHUBuffer) renderImage(); };
+        wlInput.oninput = () => { if (currentHUBuffer) renderImage(); };
+        kernelInput.onchange = () => { if (currentHUBuffer) renderImage(); };
+
+        function startScan() {
+            btnScan.disabled = true;
+            document.getElementById('gantry-visual').classList.add('scanning');
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('gantry-visual').classList.remove('scanning');
+                overlay.classList.add('hidden');
+                btnScan.disabled = false;
+                processPhysicsEngine();
+            }, 1000);
+        }
+
+        function processPhysicsEngine() {
+            const kv = currentKV;
+            const mas = currentMAS;
+            const kernel = kernelInput.value;
+
+            const dose = (mas * Math.pow(kv/100, 2) * 0.07).toFixed(2);
+            cumulativeDose += parseFloat(dose);
+            document.getElementById('stat-dose').innerText = dose;
+            document.getElementById('total-dose-display').innerText = "Acumulado: " + cumulativeDose.toFixed(2) + " mGy";
+
+            let noiseBase = 35 / Math.sqrt(mas * (kv/115));
+            if (kernel === 'bone') noiseBase *= 2.2;
+            if (kernel === 'soft') noiseBase *= 0.55;
+            document.getElementById('stat-noise').innerText = noiseBase.toFixed(1);
+
+            const contrastEnhancement = 1 + (140 - kv) / 55;
+            generateAnatomy(noiseBase, contrastEnhancement);
+            
+            const safePercent = Math.max(0, 100 - (dose * 2.8));
+            safetyBar.style.width = safePercent + '%';
+            safetyBar.className = safePercent < 40 ? 'w-full h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]' : 'w-full h-full bg-cyan-500';
+
+            updateReport(dose, noiseBase, kv, kernel);
+        }
+
+        function generateAnatomy(noise, contrast) {
+            const size = 512;
+            const buffer = new Float32Array(size * size);
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const dx = x - 256;
+                    const dy = y - 256;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    let hu = -1000; 
+
+                    if (dist < 185) hu = 38; 
+                    if (dist > 155 && dist < 178 && dy > 115 && Math.abs(dx) < 40) hu = 800 * contrast; 
+
+                    const fdist = Math.sqrt(Math.pow(x-190,2) + Math.pow(y-210,2));
+                    if (fdist < 65) hu = 55 * contrast; 
+
+                    const ldist = Math.sqrt(Math.pow(x-180,2) + Math.pow(y-155,2));
+                    if (ldist < 14) hu = 18;
+
+                    hu += (Math.random() - 0.5) * noise * 8.5;
+                    buffer[y * size + x] = hu;
+                }
+            }
+            currentHUBuffer = buffer;
+            renderImage();
+        }
+
+        function renderImage() {
+            const size = 512;
+            const imgData = ctx.createImageData(size, size);
+            const ww = parseInt(wwInput.value) || 400;
+            const wl = parseInt(wlInput.value) || 40;
+            const min = wl - ww / 2;
+
+            for (let i = 0; i < currentHUBuffer.length; i++) {
+                const hu = currentHUBuffer[i];
+                let gray = ((hu - min) / ww) * 255;
+                gray = Math.max(0, Math.min(255, gray));
+                const idx = i * 4;
+                imgData.data[idx] = gray;
+                imgData.data[idx + 1] = gray;
+                imgData.data[idx + 2] = gray;
+                imgData.data[idx + 3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            ctx.fillStyle = "rgba(6, 182, 212, 0.9)";
+            ctx.font = "bold 13px monospace";
+            ctx.fillText(`NAYARA - FATESA`, 15, 25);
+            ctx.font = "11px monospace";
+            ctx.fillText(`WW: ${ww} / WL: ${wl} | ${currentKV}kV ${currentMAS}mAs`, 15, 495);
+        }
+
+        function updateReport(dose, noise, kv, kernel) {
+            const report = document.getElementById('report-text');
+            const lesson = document.getElementById('physics-lesson');
+            const cnr = (40 / noise).toFixed(2);
+            document.getElementById('stat-cnr').innerText = cnr;
+
+            let html = `<div>`;
+            html += `<p class="font-bold text-cyan-400 border-b border-cyan-900 pb-1 mb-2 uppercase">Achados Físicos:</p>`;
+            if (dose > 28) html += `<p class="text-red-400">⚠️ ALERTA: Protocolo de alta dose.</p>`;
+            else html += `<p class="text-emerald-400 italic">✓ Protocolo otimizado para ${kv}kV.</p>`;
+
+            if (noise > 7.5) html += `<p class="text-amber-500 mt-1">📉 Ruído quântico elevado.</p>`;
+            else html += `<p class="text-emerald-400 mt-1">📈 Excelente nitidez. CNR: ${cnr}.</p>`;
+            
+            html += `</div>`;
+            report.innerHTML = html;
+
+            const lessons = {
+                'soft': "Filtro 'Soft': Prioriza o baixo contraste.",
+                'standard': "Filtro 'Standard': Equilíbrio entre ruído e detalhe.",
+                'bone': "Filtro 'Bone': Alta frequência espacial. Realça trabéculas."
+            };
+            lesson.innerText = lessons[kernel] || "";
+        }
+
+        btnScan.onclick = startScan;
+        ctx.fillStyle = "black";
+        ctx.fillRect(0,0,512,512);
+    </script>
+</body>
+</html>
