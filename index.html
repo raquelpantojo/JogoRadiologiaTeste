@@ -3,398 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radiology Physics Master - Simulador de Tomografia</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            background-color: #020617;
-            color: #f8fafc;
-            font-family: 'Inter', system-ui, sans-serif;
-        }
-        .panel-glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .gantry-ring {
-            width: 280px;
-            height: 280px;
-            border: 12px solid #334155;
-            border-radius: 50%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.5);
-        }
-        .tube-assembly {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            justify-content: center;
-        }
-        .tube {
-            position: absolute;
-            width: 40px;
-            height: 24px;
-            background: #64748b;
-            top: -12px;
-            border-radius: 4px;
-            border: 2px solid #94a3b8;
-        }
-        .xray-cone {
-            position: absolute;
-            top: 24px;
-            left: 50%;
-            width: 120px;
-            height: 140px;
-            background: linear-gradient(to bottom, rgba(255, 255, 0, 0.3), transparent);
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-            transform-origin: top center;
-            transform: translateX(-50%);
-            display: none;
-        }
-        .scanning .xray-cone { display: block; }
-        .scanning .tube-rotation-wrapper { animation: rotate-gantry 1.5s linear infinite; }
-        
-        @keyframes rotate-gantry {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .monitor-screen {
-            background: #000;
-            border: 8px solid #1e293b;
-            border-radius: 4px;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,1);
-        }
-        input[type=range] {
-            accent-color: #06b6d4;
-        }
-    </style>
-</head>
-<body class="p-4">
-    <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-end mb-6">
-            <div>
-                <h1 class="text-3xl font-black text-cyan-500 tracking-tighter uppercase leading-none">Radiology Physics Master</h1>
-                <p class="text-slate-500 text-xs font-medium tracking-widest mt-1">SISTEMA INTERATIVO DE FÍSICA RADIOLÓGICA III</p>
-            </div>
-            <div class="hidden md:flex flex-col items-end">
-                <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Indicador de Proteção Radiológica</p>
-                <div class="w-48 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <div id="safety-bar" class="w-full h-full bg-cyan-500 transition-all duration-700 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
-                </div>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- PAINEL DE CONTROLO -->
-            <div class="lg:col-span-3 space-y-4">
-                <div class="panel-glass p-5 rounded-2xl shadow-xl">
-                    <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
-                        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <h2 class="text-xs font-bold text-white uppercase tracking-widest">Protocolo de Aquisição</h2>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <div class="group">
-                            <div class="flex justify-between text-xs mb-1">
-                                <label class="text-slate-300">Tensão (kV)</label>
-                                <span id="kv-display" class="font-mono text-cyan-400 font-bold">120 kV</span>
-                            </div>
-                            <input type="range" id="kv-input" min="80" max="140" step="20" value="120" class="w-full">
-                        </div>
-
-                        <div class="group">
-                            <div class="flex justify-between text-xs mb-1">
-                                <label class="text-slate-300">Exposição (mAs)</label>
-                                <span id="mas-display" class="font-mono text-cyan-400 font-bold">200 mAs</span>
-                            </div>
-                            <input type="range" id="mas-input" min="10" max="600" step="10" value="200" class="w-full">
-                        </div>
-
-                        <div>
-                            <label class="text-xs mb-1 block text-slate-300">Kernel de Reconstrução</label>
-                            <select id="kernel-input" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500">
-                                <option value="soft">Soft (Partes Moles)</option>
-                                <option value="standard" selected>Standard (Intermédio)</option>
-                                <option value="bone">Sharp (Ósseo/Alta Resol.)</option>
-                            </select>
-                        </div>
-
-                        <button id="btn-scan" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all transform active:scale-95 shadow-lg shadow-cyan-900/40 uppercase text-sm tracking-widest">
-                            Confirmar Exposição
-                        </button>
-                    </div>
-                </div>
-
-                <div class="panel-glass p-5 rounded-2xl">
-                    <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Ajuste de Visualização (DICOM)</h2>
-                    <div class="space-y-5">
-                        <div>
-                            <div class="flex justify-between text-[10px] mb-1">
-                                <label>Window Width (WW)</label>
-                                <span id="ww-display" class="text-cyan-500 font-bold">400</span>
-                            </div>
-                            <input type="range" id="ww-input" min="50" max="2500" value="400" class="w-full h-1">
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-[10px] mb-1">
-                                <label>Window Level (WL)</label>
-                                <span id="wl-display" class="text-cyan-500 font-bold">40</span>
-                            </div>
-                            <input type="range" id="wl-input" min="-600" max="900" value="40" class="w-full h-1">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SIMULAÇÃO DO GANTRY -->
-            <div class="lg:col-span-5 flex flex-col items-center justify-center space-y-6 bg-slate-900/30 rounded-3xl p-4 border border-slate-800/50">
-                <div class="gantry-ring" id="gantry-visual">
-                    <div class="tube-rotation-wrapper absolute inset-0">
-                        <div class="tube">
-                            <div class="xray-cone"></div>
-                        </div>
-                    </div>
-                    <!-- Fantoma/Paciente -->
-                    <div class="relative z-10 w-36 h-36 bg-slate-800 rounded-full flex flex-col items-center justify-center border-4 border-slate-700 shadow-2xl">
-                         <div class="text-[9px] text-cyan-500/50 font-black tracking-tighter mb-1 uppercase">Objecto de Teste</div>
-                         <div class="w-20 h-1 bg-cyan-500/20 rounded-full animate-pulse"></div>
-                    </div>
-                </div>
-
-                <div class="w-full grid grid-cols-3 gap-3">
-                    <div class="panel-glass p-3 rounded-xl border-t-2 border-yellow-500/50 text-center">
-                        <p class="text-[9px] text-slate-500 uppercase font-bold">CTDIvol Estimado</p>
-                        <p id="stat-dose" class="text-xl font-mono font-bold text-yellow-500">0.00 <span class="text-[10px]">mGy</span></p>
-                    </div>
-                    <div class="panel-glass p-3 rounded-xl border-t-2 border-cyan-500/50 text-center">
-                        <p class="text-[9px] text-slate-500 uppercase font-bold">Ruído (SD)</p>
-                        <p id="stat-noise" class="text-xl font-mono font-bold text-cyan-400">0.0 <span class="text-[10px]">HU</span></p>
-                    </div>
-                    <div class="panel-glass p-3 rounded-xl border-t-2 border-emerald-500/50 text-center">
-                        <p class="text-[9px] text-slate-500 uppercase font-bold">Rácio CNR</p>
-                        <p id="stat-cnr" class="text-xl font-mono font-bold text-emerald-400">--</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CONSOLA DE DIAGNÓSTICO -->
-            <div class="lg:col-span-4 flex flex-col space-y-4">
-                <div class="monitor-screen aspect-square overflow-hidden border-2 border-slate-800">
-                    <canvas id="view-canvas" width="512" height="512" class="w-full h-full"></canvas>
-                    <div id="scan-overlay" class="absolute inset-0 bg-black/90 flex items-center justify-center hidden">
-                        <div class="text-center">
-                            <div class="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p class="text-cyan-500 font-mono text-[10px] tracking-[0.2em] uppercase">A processar dados brutos...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="diagnostic-report" class="panel-glass p-5 rounded-2xl flex-grow border-l-4 border-cyan-600">
-                    <h3 class="text-xs font-black text-cyan-500 mb-3 uppercase tracking-widest">Relatório Técnico de Física</h3>
-                    <div id="report-text" class="text-xs leading-relaxed text-slate-400 font-medium">
-                        Sistema operacional. Introduza os parâmetros de feixe (kV e mAs) para iniciar a reconstrução volumétrica da secção axial.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('view-canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Controlos
-        const kvInput = document.getElementById('kv-input');
-        const masInput = document.getElementById('mas-input');
-        const kernelInput = document.getElementById('kernel-input');
-        const wwInput = document.getElementById('ww-input');
-        const wlInput = document.getElementById('wl-input');
-        const btnScan = document.getElementById('btn-scan');
-        const overlay = document.getElementById('scan-overlay');
-        const safetyBar = document.getElementById('safety-bar');
-
-        // Estado Global
-        let currentImageBuffer = null;
-        let pathologyActive = Math.random() > 0.3; 
-        let pathologyPos = { x: 160 + (Math.random()*20), y: 140 + (Math.random()*20) };
-
-        function updateUI() {
-            document.getElementById('kv-display').innerText = kvInput.value + ' kV';
-            document.getElementById('mas-display').innerText = masInput.value + ' mAs';
-            document.getElementById('ww-display').innerText = wwInput.value;
-            document.getElementById('wl-display').innerText = wlInput.value;
-            
-            if (currentImageBuffer) renderWithWindowing();
-        }
-
-        kvInput.oninput = updateUI;
-        masInput.oninput = updateUI;
-        wwInput.oninput = updateUI;
-        wlInput.oninput = updateUI;
-        kernelInput.onchange = updateUI;
-
-        function startScan() {
-            btnScan.disabled = true;
-            document.getElementById('gantry-visual').classList.add('scanning');
-            overlay.classList.remove('hidden');
-
-            setTimeout(() => {
-                document.getElementById('gantry-visual').classList.remove('scanning');
-                overlay.classList.add('hidden');
-                btnScan.disabled = false;
-                calculatePhysics();
-            }, 1500);
-        }
-
-        function calculatePhysics() {
-            const kv = parseInt(kvInput.value);
-            const mas = parseInt(masInput.value);
-            const kernel = kernelInput.value;
-
-            // 1. DOSE (CTDIvol) - Modelo simplificado
-            const dose = (mas * Math.pow(kv/100, 2) * 0.08).toFixed(2);
-            document.getElementById('stat-dose').innerText = `${dose} mGy`;
-
-            // 2. RUÍDO (Desvio Padrão)
-            let noiseBase = 32 / Math.sqrt(mas * (kv/100));
-            if (kernel === 'bone') noiseBase *= 1.9;
-            if (kernel === 'soft') noiseBase *= 0.55;
-            document.getElementById('stat-noise').innerText = noiseBase.toFixed(1) + " HU";
-
-            // 3. CONTRASTE (Variação da Atenuação Linear)
-            const contrastFactor = 1 + (140 - kv) / 55;
-
-            generateHUBuffer(kv, noiseBase, contrastFactor);
-            
-            // Segurança
-            const safety = Math.max(0, 100 - (dose * 2.2));
-            safetyBar.style.width = safety + '%';
-            safetyBar.className = safety < 35 ? 'w-full h-full bg-red-500' : 'w-full h-full bg-cyan-500';
-
-            createReport(dose, noiseBase, kv);
-        }
-
-        function generateHUBuffer(kv, noise, contrast) {
-            const size = 512;
-            const buffer = new Float32Array(size * size);
-            
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    const dx = x - 256;
-                    const dy = y - 256;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    let hu = -1000; // Unidades Hounsfield do Ar
-
-                    // Anatomia principal (Círculo de tecido mole ~ 40 HU)
-                    if (dist < 185) hu = 35;
-                    
-                    // Estrutura Óssea (Varia com kV por causa do efeito fotoelétrico)
-                    if (dist > 150 && dist < 175 && dy > 110 && Math.abs(dx) < 45) hu = 750 * contrast;
-
-                    // Órgão Parenquimatoso (Fígado/Baço ~ 60 HU)
-                    const fdx = x - 170;
-                    const fdy = y - 230;
-                    if (Math.sqrt(fdx*fdx + fdy*fdy) < 65) hu = 60 * contrast;
-
-                    // Patologia (Hipodensa ~ 15 HU)
-                    if (pathologyActive) {
-                        const pdx = x - pathologyPos.x;
-                        const pdy = y - pathologyPos.y;
-                        if (Math.sqrt(pdx*pdx + pdy*pdy) < 14) hu = 15;
-                    }
-
-                    // Ruído Quântico Gaussiano (Simulado)
-                    hu += (Math.random() - 0.5) * noise * 7.5;
-
-                    buffer[y * size + x] = hu;
-                }
-            }
-            currentImageBuffer = buffer;
-            renderWithWindowing();
-        }
-
-        function renderWithWindowing() {
-            const size = 512;
-            const imgData = ctx.createImageData(size, size);
-            const ww = parseInt(wwInput.value);
-            const wl = parseInt(wlInput.value);
-
-            const minHU = wl - ww / 2;
-
-            for (let i = 0; i < currentImageBuffer.length; i++) {
-                const hu = currentImageBuffer[i];
-                let gray = ((hu - minHU) / ww) * 255;
-                gray = Math.max(0, Math.min(255, gray));
-
-                const idx = i * 4;
-                imgData.data[idx] = gray;
-                imgData.data[idx + 1] = gray;
-                imgData.data[idx + 2] = gray;
-                imgData.data[idx + 3] = 255;
-            }
-            ctx.putImageData(imgData, 0, 0);
-            
-            // Dados DICOM sobrepostos
-            ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-            ctx.font = "12px 'Courier New', monospace";
-            ctx.fillText(`W: ${ww} L: ${wl}`, 15, 495);
-        }
-
-        function createReport(dose, noise, kv) {
-            const report = document.getElementById('report-text');
-            const cnr = (45 / noise).toFixed(2);
-            document.getElementById('stat-cnr').innerText = cnr;
-
-            let html = `<div class="space-y-2">`;
-            html += `<p><b>Análise do Espectro:</b> À energia de ${kv} kV, a interação dominante nos tecidos é o efeito Compton, com componente fotoelétrico ${kv < 100 ? 'elevado' : 'reduzido'} no osso.</p>`;
-            
-            if (dose > 22) {
-                html += `<p class="text-red-400 font-bold border-l-2 border-red-500 pl-2 italic">AVISO: Dose acima do DRL sugerido. Risco estocástico desnecessário.</p>`;
-            } else {
-                html += `<p class="text-cyan-400">STATUS: Conformidade ALARA validada. Dose de ${dose} mGy adequada.</p>`;
-            }
-
-            if (noise > 9) {
-                html += `<p class="text-amber-500 font-bold mt-2">ALERTA TÉCNICO: Ruído quântico excessivo está a degradar a detetabilidade de baixo contraste (CNR ${cnr}).</p>`;
-            } else {
-                html += `<p class="text-emerald-400 mt-2 font-bold">QUALIDADE: Rácio Contraste-Ruído (${cnr}) otimizado para diagnóstico de tecidos moles.</p>`;
-            }
-
-            if (pathologyActive && noise < 6.5) {
-                html += `<p class="mt-3 bg-cyan-900/50 p-2 rounded text-white animate-pulse">🎯 ACHADO POSSÍVEL: Suspeita de lesão hipodensa focal em parênquima glandular. Ajuste WW/WL para confirmar.</p>`;
-            } else if (pathologyActive && noise >= 6.5) {
-                html += `<p class="mt-3 text-slate-500 italic">Nota: A textura de ruído atual impede a exclusão de micro-patologias focais.</p>`;
-            }
-
-            html += `</div>`;
-            report.innerHTML = html;
-        }
-
-        btnScan.onclick = startScan;
-        
-        // Setup Inicial
-        ctx.fillStyle = "black";
-        ctx.fillRect(0,0,512,512);
-        updateUI();
-
-    </script>
-</body>
-</html>
-Nayara Silva<nayara.stz@hotmail.com>
-
-​
-Raquel Pantojo de Souza Bachour​
-<!DOCTYPE html>
-<html lang="pt-pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radiology Physics Master - Nayara (FATESA)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -469,29 +77,30 @@ Raquel Pantojo de Souza Bachour​
             box-shadow: 0 0 30px rgba(0,0,0,1);
         }
 
-        /* Estilos dos Botões de Parâmetros */
         .param-btn {
             background: #1e293b;
             border: 1px solid #334155;
             color: #94a3b8;
-            padding: 8px 4px;
+            padding: 10px 4px;
             border-radius: 6px;
             font-family: monospace;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: bold;
             transition: all 0.2s;
+            cursor: pointer;
         }
         .param-btn.active {
             background: #0891b2;
             color: white;
             border-color: #06b6d4;
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+            transform: scale(1.05);
         }
         .param-btn:hover:not(.active) {
             background: #334155;
             color: white;
         }
 
-        /* Estilos da Página de Início */
         #start-screen {
             position: fixed;
             inset: 0;
@@ -524,7 +133,7 @@ Raquel Pantojo de Souza Bachour​
 
     <!-- PÁGINA DE INÍCIO -->
     <div id="start-screen">
-        <div class="start-card animate-in fade-in zoom-in duration-700">
+        <div class="start-card">
             <div class="fatesa-logo italic uppercase">FATESA</div>
             <h1 class="text-white text-xl font-light tracking-[0.3em] mb-2 uppercase">Radiology Physics Master</h1>
             <div class="h-px w-24 bg-cyan-500 mx-auto mb-6"></div>
@@ -536,19 +145,16 @@ Raquel Pantojo de Souza Bachour​
                     <p class="text-white text-base">Nayara</p>
                     <p class="text-xs">4º Semestre • Tecnologia em Radiologia</p>
                 </div>
-                <p class="text-[10px] leading-relaxed italic">Configura os parâmetros físicos através dos botões da consola para análise de qualidade e dose.</p>
             </div>
 
-            <button onclick="startGame()" class="group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-full transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em] overflow-hidden">
-                <span class="relative z-10">Iniciar Consola</span>
-                <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <button onclick="startGame()" class="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-full transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em]">
+                Iniciar Consola
             </button>
         </div>
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL (APP) -->
-    <div id="app-content" class="max-w-7xl mx-auto transition-all duration-1000 blur-md scale-95 opacity-0">
-        <!-- Cabeçalho Personalizado FATESA -->
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div id="app-content" class="max-w-7xl mx-auto opacity-0 transition-opacity duration-1000">
         <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
             <div>
                 <h1 class="text-3xl font-black text-cyan-500 tracking-tighter uppercase leading-none italic">Radiology Physics Master</h1>
@@ -558,11 +164,9 @@ Raquel Pantojo de Souza Bachour​
                 </div>
             </div>
             <div class="flex flex-col items-end">
-                <div class="flex gap-4 mb-2">
-                    <div class="text-right">
-                        <p class="text-[9px] text-slate-500 uppercase font-bold">Protocolo de Segurança</p>
-                        <p id="total-dose-display" class="text-xs font-mono text-white">Dose: 0.00 mGy</p>
-                    </div>
+                <div class="text-right mb-2">
+                    <p class="text-[9px] text-slate-500 uppercase font-bold">Dose Total Acumulada</p>
+                    <p id="total-dose-display" class="text-xs font-mono text-white">0.00 mGy</p>
                 </div>
                 <div class="w-48 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                     <div id="safety-bar" class="w-full h-full bg-cyan-500 transition-all duration-700"></div>
@@ -571,8 +175,7 @@ Raquel Pantojo de Souza Bachour​
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- COLUNA ESQUERDA: PARÂMETROS (COM BOTÕES AGORA) -->
+            <!-- COLUNA ESQUERDA -->
             <div class="lg:col-span-3 space-y-6">
                 <div class="panel-glass p-5 rounded-2xl shadow-2xl">
                     <h2 class="text-xs font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -580,7 +183,6 @@ Raquel Pantojo de Souza Bachour​
                     </h2>
                     
                     <div class="space-y-6">
-                        <!-- Seleção de kV -->
                         <div>
                             <p class="text-[10px] text-slate-400 uppercase font-bold mb-3 tracking-wider">Tensão do Tubo (kV)</p>
                             <div class="grid grid-cols-4 gap-2" id="kv-container">
@@ -591,7 +193,6 @@ Raquel Pantojo de Souza Bachour​
                             </div>
                         </div>
 
-                        <!-- Seleção de mAs -->
                         <div>
                             <p class="text-[10px] text-slate-400 uppercase font-bold mb-3 tracking-wider">Corrente x Tempo (mAs)</p>
                             <div class="grid grid-cols-3 gap-2" id="mas-container">
@@ -606,99 +207,81 @@ Raquel Pantojo de Souza Bachour​
 
                         <div>
                             <label class="text-[10px] text-slate-400 uppercase font-bold mb-3 block tracking-wider">Algoritmo (Kernel)</label>
-                            <select id="kernel-input" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:ring-1 focus:ring-cyan-500 outline-none">
+                            <select id="kernel-input" onchange="applyImmediateChanges()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white outline-none">
                                 <option value="soft">Soft (Tecidos Moles)</option>
                                 <option value="standard" selected>Standard (Padrão)</option>
-                                <option value="bone">Sharp (Ósseo - Alta Freq.)</option>
+                                <option value="bone">Sharp (Alta Freq.)</option>
                             </select>
                         </div>
 
-                        <button id="btn-scan" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em]">
+                        <button id="btn-scan" onclick="startScan()" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all shadow-lg shadow-cyan-900/40 uppercase text-xs tracking-[0.2em]">
                             Efetuar Varredura
                         </button>
                     </div>
                 </div>
 
+                <!-- Janelamento -->
                 <div class="panel-glass p-5 rounded-2xl">
-                    <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Janelamento Manual</h2>
+                    <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Janelamento</h2>
                     <div class="space-y-4">
-                         <div class="flex flex-col gap-2">
-                            <button onclick="setWindow(400, 40)" class="text-[10px] bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700 transition-colors">🧠 Crânio</button>
-                            <button onclick="setWindow(1500, -600)" class="text-[10px] bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700 transition-colors">🫁 Tórax</button>
+                         <div class="grid grid-cols-2 gap-2">
+                            <button onclick="setWindow(400, 40)" class="text-[9px] bg-slate-800 hover:bg-slate-700 p-2 rounded border border-slate-700">🧠 Crânio</button>
+                            <button onclick="setWindow(1500, -600)" class="text-[9px] bg-slate-800 hover:bg-slate-700 p-2 rounded border border-slate-700">🫁 Tórax</button>
                         </div>
-                        <div class="border-t border-slate-800 pt-3">
-                             <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="text-[9px] text-slate-500 block mb-1 uppercase">WW</label>
-                                    <input type="number" id="ww-input" value="400" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-500 block mb-1 uppercase">WL</label>
-                                    <input type="number" id="wl-input" value="40" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
-                                </div>
-                             </div>
+                        <div class="border-t border-slate-800 pt-3 grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] text-slate-500 block uppercase">WW</label>
+                                <input type="number" id="ww-input" value="400" oninput="renderImage()" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-slate-500 block uppercase">WL</label>
+                                <input type="number" id="wl-input" value="40" oninput="renderImage()" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-cyan-400 font-mono">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- CENTRO: SIMULAÇÃO GANTRY -->
-            <div class="lg:col-span-5 flex flex-col items-center justify-start space-y-8">
+            <!-- COLUNA CENTRAL -->
+            <div class="lg:col-span-5 flex flex-col items-center space-y-8">
                 <div class="gantry-ring" id="gantry-visual">
                     <div class="tube-rotation-wrapper">
-                        <div class="tube">
-                            KV/MA
-                            <div class="xray-cone"></div>
-                        </div>
+                        <div class="tube">KV/MA<div class="xray-cone"></div></div>
                     </div>
-                    <!-- Fantoma -->
-                    <div class="relative z-10 w-40 h-40 bg-slate-800 rounded-full flex flex-col items-center justify-center border-8 border-slate-700 shadow-inner overflow-hidden">
-                         <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle,_#06b6d4_1px,_transparent_1px)] bg-[size:15px_15px]"></div>
-                         <div class="text-[10px] text-cyan-500/80 font-black uppercase text-center leading-tight tracking-widest">Amostra<br>FATESA</div>
+                    <div class="relative z-10 w-40 h-40 bg-slate-800 rounded-full flex flex-col items-center justify-center border-8 border-slate-700 shadow-inner">
+                         <div class="text-[10px] text-cyan-500 font-black uppercase text-center">Amostra FATESA</div>
                     </div>
                 </div>
 
-                <div class="w-full grid grid-cols-3 gap-4">
-                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-yellow-500/50">
-                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">CTDIvol (mGy)</p>
-                        <p id="stat-dose" class="text-2xl font-mono font-bold text-yellow-500">0.00</p>
+                <div class="w-full grid grid-cols-3 gap-4 text-center">
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-yellow-500">
+                        <p class="text-[9px] text-slate-500 uppercase font-black">CTDIvol (mGy)</p>
+                        <p id="stat-dose" class="text-xl font-mono font-bold text-yellow-500">0.00</p>
                     </div>
-                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-cyan-500/50">
-                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">Ruído (SD)</p>
-                        <p id="stat-noise" class="text-2xl font-mono font-bold text-cyan-400">0.0</p>
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-cyan-500">
+                        <p class="text-[9px] text-slate-500 uppercase font-black">Ruído (SD)</p>
+                        <p id="stat-noise" class="text-xl font-mono font-bold text-cyan-400">0.0</p>
                     </div>
-                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-emerald-500/50">
-                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">CNR Real</p>
-                        <p id="stat-cnr" class="text-2xl font-mono font-bold text-emerald-400">--</p>
+                    <div class="panel-glass p-4 rounded-2xl border-b-2 border-emerald-500">
+                        <p class="text-[9px] text-slate-500 uppercase font-black">CNR</p>
+                        <p id="stat-cnr" class="text-xl font-mono font-bold text-emerald-400">--</p>
                     </div>
-                </div>
-
-                <div class="panel-glass p-4 rounded-xl w-full border border-slate-800">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase mb-2">Física Aplicada (Nayara):</h4>
-                    <p id="physics-lesson" class="text-[11px] text-slate-400 italic">Configure os parâmetros e inicie a aquisição.</p>
                 </div>
             </div>
 
-            <!-- DIREITA: RESULTADO -->
+            <!-- COLUNA DIREITA -->
             <div class="lg:col-span-4 flex flex-col space-y-4">
                 <div class="monitor-screen aspect-square overflow-hidden bg-black">
                     <canvas id="view-canvas" width="512" height="512" class="w-full h-full"></canvas>
-                    <div id="scan-overlay" class="absolute inset-0 bg-black/95 flex items-center justify-center hidden">
-                        <div class="text-center">
-                            <div class="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p class="text-cyan-500 font-mono text-[9px] tracking-[0.4em] uppercase">Processando DICOM...</p>
-                        </div>
+                    <div id="scan-overlay" class="absolute inset-0 bg-black/90 flex items-center justify-center hidden">
+                        <p class="text-cyan-500 font-mono text-[9px] uppercase animate-pulse">A adquirir dados...</p>
                     </div>
                 </div>
 
-                <div class="panel-glass p-6 rounded-2xl flex-grow border-l-4 border-cyan-500">
-                    <h3 class="text-xs font-black text-cyan-400 mb-4 uppercase tracking-[0.2em]">Relatório Técnico (FATESA)</h3>
-                    <div id="report-text" class="text-[11px] space-y-3 text-slate-300">
-                        <p>Bem-vinda, Nayara. O sistema de simulação de 4º semestre está operacional.</p>
-                        <ul class="list-disc ml-4 space-y-1 text-slate-500 font-medium">
-                            <li>Analise o compromisso entre Dose e Ruído.</li>
-                            <li>Observe a influência do Kernel na resolução.</li>
-                        </ul>
+                <div class="panel-glass p-5 rounded-2xl flex-grow border-l-4 border-cyan-500 text-[11px]">
+                    <h3 class="font-black text-cyan-400 mb-2 uppercase italic">Relatório (Nayara - FATESA)</h3>
+                    <div id="report-text" class="text-slate-300 leading-relaxed">
+                        Aguardando primeira varredura para análise física.
                     </div>
                 </div>
             </div>
@@ -706,30 +289,32 @@ Raquel Pantojo de Souza Bachour​
     </div>
 
     <script>
-        // Estado Global dos Parâmetros
         let currentKV = 120;
         let currentMAS = 200;
+        let currentHUBuffer = null;
+        let cumulativeDose = 0;
+
+        const canvas = document.getElementById('view-canvas');
+        const ctx = canvas.getContext('2d');
 
         function startGame() {
-            const startScreen = document.getElementById('start-screen');
-            const appContent = document.getElementById('app-content');
-            startScreen.style.opacity = '0';
-            startScreen.style.visibility = 'hidden';
-            appContent.classList.remove('blur-md', 'scale-95', 'opacity-0');
-            appContent.classList.add('blur-none', 'scale-100', 'opacity-100');
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('app-content').classList.remove('opacity-0');
+            // Inicializa o ecrã a preto
+            ctx.fillStyle = "black";
+            ctx.fillRect(0,0,512,512);
         }
 
-        // Funções para definir os parâmetros via botões
         function setKV(val) {
             currentKV = val;
             updateButtonVisuals('kv-container', val);
-            if (currentHUBuffer) renderImage();
+            applyImmediateChanges();
         }
 
         function setMAS(val) {
             currentMAS = val;
             updateButtonVisuals('mas-container', val);
-            if (currentHUBuffer) renderImage();
+            applyImmediateChanges();
         }
 
         function updateButtonVisuals(containerId, activeVal) {
@@ -744,65 +329,58 @@ Raquel Pantojo de Souza Bachour​
             });
         }
 
-        const canvas = document.getElementById('view-canvas');
-        const ctx = canvas.getContext('2d');
-        const kernelInput = document.getElementById('kernel-input');
-        const wwInput = document.getElementById('ww-input');
-        const wlInput = document.getElementById('wl-input');
-        const btnScan = document.getElementById('btn-scan');
-        const overlay = document.getElementById('scan-overlay');
-        const safetyBar = document.getElementById('safety-bar');
-
-        let currentHUBuffer = null;
-        let cumulativeDose = 0;
-
         function setWindow(ww, wl) {
-            wwInput.value = ww;
-            wlInput.value = wl;
+            document.getElementById('ww-input').value = ww;
+            document.getElementById('wl-input').value = wl;
             if (currentHUBuffer) renderImage();
         }
 
-        // Listeners para inputs numéricos de janela
-        wwInput.oninput = () => { if (currentHUBuffer) renderImage(); };
-        wlInput.oninput = () => { if (currentHUBuffer) renderImage(); };
-        kernelInput.onchange = () => { if (currentHUBuffer) renderImage(); };
+        function applyImmediateChanges() {
+            // Se já existir uma imagem, atualiza o processamento físico
+            if (currentHUBuffer) {
+                processPhysicsEngine();
+            }
+        }
 
         function startScan() {
-            btnScan.disabled = true;
-            document.getElementById('gantry-visual').classList.add('scanning');
+            const btn = document.getElementById('btn-scan');
+            const overlay = document.getElementById('scan-overlay');
+            const gantry = document.getElementById('gantry-visual');
+
+            btn.disabled = true;
+            gantry.classList.add('scanning');
             overlay.classList.remove('hidden');
 
             setTimeout(() => {
-                document.getElementById('gantry-visual').classList.remove('scanning');
+                gantry.classList.remove('scanning');
                 overlay.classList.add('hidden');
-                btnScan.disabled = false;
+                btn.disabled = false;
                 processPhysicsEngine();
-            }, 1000);
+            }, 1200);
         }
 
         function processPhysicsEngine() {
             const kv = currentKV;
             const mas = currentMAS;
-            const kernel = kernelInput.value;
+            const kernel = document.getElementById('kernel-input').value;
 
-            const dose = (mas * Math.pow(kv/100, 2) * 0.07).toFixed(2);
+            // Cálculos físicos base
+            const dose = (mas * Math.pow(kv/100, 2) * 0.075).toFixed(2);
             cumulativeDose += parseFloat(dose);
-            document.getElementById('stat-dose').innerText = dose;
-            document.getElementById('total-dose-display').innerText = "Acumulado: " + cumulativeDose.toFixed(2) + " mGy";
-
-            let noiseBase = 35 / Math.sqrt(mas * (kv/115));
-            if (kernel === 'bone') noiseBase *= 2.2;
-            if (kernel === 'soft') noiseBase *= 0.55;
-            document.getElementById('stat-noise').innerText = noiseBase.toFixed(1);
-
-            const contrastEnhancement = 1 + (140 - kv) / 55;
-            generateAnatomy(noiseBase, contrastEnhancement);
             
-            const safePercent = Math.max(0, 100 - (dose * 2.8));
-            safetyBar.style.width = safePercent + '%';
-            safetyBar.className = safePercent < 40 ? 'w-full h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]' : 'w-full h-full bg-cyan-500';
+            document.getElementById('stat-dose').innerText = dose;
+            document.getElementById('total-dose-display').innerText = cumulativeDose.toFixed(2) + " mGy";
 
-            updateReport(dose, noiseBase, kv, kernel);
+            let noiseBase = 32 / Math.sqrt(mas * (kv/120));
+            if (kernel === 'bone') noiseBase *= 2.5;
+            if (kernel === 'soft') noiseBase *= 0.6;
+            
+            document.getElementById('stat-noise').innerText = noiseBase.toFixed(1);
+            document.getElementById('stat-cnr').innerText = (45 / noiseBase).toFixed(2);
+
+            const contrast = 1 + (140 - kv) / 60;
+            generateAnatomy(noiseBase, contrast);
+            updateReport(dose, noiseBase);
         }
 
         function generateAnatomy(noise, contrast) {
@@ -815,16 +393,18 @@ Raquel Pantojo de Souza Bachour​
                     const dist = Math.sqrt(dx*dx + dy*dy);
                     let hu = -1000; 
 
-                    if (dist < 185) hu = 38; 
-                    if (dist > 155 && dist < 178 && dy > 115 && Math.abs(dx) < 40) hu = 800 * contrast; 
+                    if (dist < 180) hu = 35; // Músculo
+                    if (dist > 150 && dist < 175 && dy > 110 && Math.abs(dx) < 45) hu = 900 * contrast; // Osso
+                    
+                    // Pulmão/Ar
+                    const fdist = Math.sqrt(Math.pow(x-200,2) + Math.pow(y-220,2));
+                    if (fdist < 70) hu = -600; 
 
-                    const fdist = Math.sqrt(Math.pow(x-190,2) + Math.pow(y-210,2));
-                    if (fdist < 65) hu = 55 * contrast; 
+                    // Lesão focal
+                    const ldist = Math.sqrt(Math.pow(x-180,2) + Math.pow(y-160,2));
+                    if (ldist < 15) hu = 15; 
 
-                    const ldist = Math.sqrt(Math.pow(x-180,2) + Math.pow(y-155,2));
-                    if (ldist < 14) hu = 18;
-
-                    hu += (Math.random() - 0.5) * noise * 8.5;
+                    hu += (Math.random() - 0.5) * noise * 10;
                     buffer[y * size + x] = hu;
                 }
             }
@@ -833,15 +413,15 @@ Raquel Pantojo de Souza Bachour​
         }
 
         function renderImage() {
+            if (!currentHUBuffer) return;
             const size = 512;
             const imgData = ctx.createImageData(size, size);
-            const ww = parseInt(wwInput.value) || 400;
-            const wl = parseInt(wlInput.value) || 40;
+            const ww = parseInt(document.getElementById('ww-input').value) || 400;
+            const wl = parseInt(document.getElementById('wl-input').value) || 40;
             const min = wl - ww / 2;
 
             for (let i = 0; i < currentHUBuffer.length; i++) {
-                const hu = currentHUBuffer[i];
-                let gray = ((hu - min) / ww) * 255;
+                let gray = ((currentHUBuffer[i] - min) / ww) * 255;
                 gray = Math.max(0, Math.min(255, gray));
                 const idx = i * 4;
                 imgData.data[idx] = gray;
@@ -851,41 +431,22 @@ Raquel Pantojo de Souza Bachour​
             }
             ctx.putImageData(imgData, 0, 0);
             
-            ctx.fillStyle = "rgba(6, 182, 212, 0.9)";
-            ctx.font = "bold 13px monospace";
-            ctx.fillText(`NAYARA - FATESA`, 15, 25);
-            ctx.font = "11px monospace";
-            ctx.fillText(`WW: ${ww} / WL: ${wl} | ${currentKV}kV ${currentMAS}mAs`, 15, 495);
+            // Info Overlay
+            ctx.fillStyle = "#06b6d4";
+            ctx.font = "bold 12px monospace";
+            ctx.fillText("NAYARA - FATESA", 15, 25);
+            ctx.font = "10px monospace";
+            ctx.fillText(`${currentKV}kV | ${currentMAS}mAs`, 15, 40);
         }
 
-        function updateReport(dose, noise, kv, kernel) {
+        function updateReport(dose, noise) {
             const report = document.getElementById('report-text');
-            const lesson = document.getElementById('physics-lesson');
-            const cnr = (40 / noise).toFixed(2);
-            document.getElementById('stat-cnr').innerText = cnr;
-
-            let html = `<div>`;
-            html += `<p class="font-bold text-cyan-400 border-b border-cyan-900 pb-1 mb-2 uppercase">Achados Físicos:</p>`;
-            if (dose > 28) html += `<p class="text-red-400">⚠️ ALERTA: Protocolo de alta dose.</p>`;
-            else html += `<p class="text-emerald-400 italic">✓ Protocolo otimizado para ${kv}kV.</p>`;
-
-            if (noise > 7.5) html += `<p class="text-amber-500 mt-1">📉 Ruído quântico elevado.</p>`;
-            else html += `<p class="text-emerald-400 mt-1">📈 Excelente nitidez. CNR: ${cnr}.</p>`;
-            
-            html += `</div>`;
-            report.innerHTML = html;
-
-            const lessons = {
-                'soft': "Filtro 'Soft': Prioriza o baixo contraste.",
-                'standard': "Filtro 'Standard': Equilíbrio entre ruído e detalhe.",
-                'bone': "Filtro 'Bone': Alta frequência espacial. Realça trabéculas."
-            };
-            lesson.innerText = lessons[kernel] || "";
+            let txt = `<p class="mb-2">Parametrização concluída com sucesso.</p>`;
+            if (dose > 35) txt += `<p class="text-red-400 font-bold">⚠️ ALERTA: Dose elevada. Considere baixar o mAs.</p>`;
+            if (noise > 8) txt += `<p class="text-yellow-500">ℹ️ Ruído significativo. Filtro standard recomendado.</p>`;
+            else txt += `<p class="text-emerald-400 italic">✓ Ótima relação sinal-ruído para diagnóstico.</p>`;
+            report.innerHTML = txt;
         }
-
-        btnScan.onclick = startScan;
-        ctx.fillStyle = "black";
-        ctx.fillRect(0,0,512,512);
     </script>
 </body>
 </html>
