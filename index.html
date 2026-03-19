@@ -1,731 +1,387 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RadSim: Desafio ALARA</title>
+    <title>Radiology Physics Master - Simulador de Tomografia</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #e2e8f0;
-            overflow-x: hidden;
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, sans-serif;
         }
-
-        .game-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+        .panel-glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        /* Efeito de Scanline para estética de monitor antigo */
-        .scanlines {
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.1) 50%,
-                rgba(0,0,0,0.1)
-            );
-            background-size: 100% 4px;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            z-index: 10;
-            opacity: 0.3;
-        }
-
-        .control-panel {
-            background: #1e293b;
-            border: 1px solid #334155;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        .meter-bar {
-            transition: width 0.5s ease-out;
-        }
-
-        .radiation-flash {
-            animation: flash 0.2s ease-in-out;
-        }
-
-        @keyframes flash {
-            0% { background-color: rgba(255, 255, 0, 0); }
-            50% { background-color: rgba(255, 255, 0, 0.3); }
-            100% { background-color: rgba(255, 255, 0, 0); }
-        }
-
-        /* Custom Range Slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
+        .gantry-ring {
+            width: 280px;
+            height: 280px;
+            border: 12px solid #334155;
             border-radius: 50%;
-            background: #38bdf8;
-            cursor: pointer;
-            margin-top: -6px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.5);
         }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #475569;
-            border-radius: 2px;
+        .tube-assembly {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .tube {
+            position: absolute;
+            width: 40px;
+            height: 24px;
+            background: #64748b;
+            top: -12px;
+            border-radius: 4px;
+            border: 2px solid #94a3b8;
+        }
+        .xray-cone {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            width: 120px;
+            height: 140px;
+            background: linear-gradient(to bottom, rgba(255, 255, 0, 0.3), transparent);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            transform-origin: top center;
+            transform: translateX(-50%);
+            display: none;
+        }
+        .scanning .xray-cone { display: block; }
+        .scanning .tube-rotation-wrapper { animation: rotate-gantry 1.5s linear infinite; }
+        
+        @keyframes rotate-gantry {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .modal-overlay {
-            background-color: rgba(0,0,0,0.85);
+        .monitor-screen {
+            background: #000;
+            border: 8px solid #1e293b;
+            border-radius: 4px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,1);
+        }
+        input[type=range] {
+            accent-color: #06b6d4;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-200">
-
-    <div class="scanlines"></div>
-
-    <div id="app" class="game-container p-4 relative">
-        <!-- HEADER / HUD -->
-        <header class="flex justify-between items-center mb-6 bg-slate-800 p-4 rounded-lg border border-slate-700">
-            <div class="flex items-center gap-3">
-                <div class="bg-yellow-500 text-black font-bold p-2 rounded animate-pulse">
-                    <i class="fa-solid fa-radiation"></i> RadSim
-                </div>
-                <div>
-                    <div class="text-xs text-slate-400">TÉCNICO</div>
-                    <div class="font-bold text-lg" id="playerName">Aluno Radiologia</div>
-                </div>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-end mb-6">
+            <div>
+                <h1 class="text-3xl font-black text-cyan-500 tracking-tighter uppercase leading-none">Radiology Physics Master</h1>
+                <p class="text-slate-500 text-xs font-medium tracking-widest mt-1">SISTEMA INTERATIVO DE FÍSICA RADIOLÓGICA III</p>
             </div>
-            
-            <div class="flex gap-6 text-center">
-                <div>
-                    <div class="text-xs text-slate-400">SEU DOSÍMETRO (mSv)</div>
-                    <div class="w-32 h-4 bg-slate-700 rounded-full mt-1 overflow-hidden relative">
-                        <div id="doseMeter" class="h-full bg-green-500 meter-bar" style="width: 0%"></div>
-                    </div>
-                    <div id="doseValue" class="text-xs mt-1 font-mono">0.00 mSv</div>
-                </div>
-                <div>
-                    <div class="text-xs text-slate-400">PONTUAÇÃO</div>
-                    <div id="scoreValue" class="font-bold text-xl text-yellow-400 font-mono">0</div>
-                </div>
-                <div>
-                    <div class="text-xs text-slate-400">TURNO</div>
-                    <div id="turnValue" class="font-bold text-xl font-mono">1/5</div>
+            <div class="hidden md:flex flex-col items-end">
+                <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Indicador de Proteção Radiológica</p>
+                <div class="w-48 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="safety-bar" class="w-full h-full bg-cyan-500 transition-all duration-700 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
                 </div>
             </div>
         </header>
 
-        <!-- MAIN GAME AREA -->
-        <main id="gameScreen" class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- LEFT COLUMN: PATIENT INFO -->
-            <div class="lg:col-span-1 space-y-4">
-                <div class="control-panel p-5 rounded-lg border-l-4 border-blue-500">
-                    <h2 class="text-blue-400 font-bold mb-2 uppercase tracking-wide text-sm">Ordem de Exame</h2>
-                    <div class="space-y-2">
-                        <div class="flex justify-between border-b border-slate-700 pb-2">
-                            <span class="text-slate-400">Paciente:</span>
-                            <span id="patName" class="font-medium">Carregando...</span>
-                        </div>
-                        <div class="flex justify-between border-b border-slate-700 pb-2">
-                            <span class="text-slate-400">Biotipo:</span>
-                            <span id="patBody" class="font-medium">Carregando...</span>
-                        </div>
-                        <div class="flex justify-between pt-1">
-                            <span class="text-slate-400">Região:</span>
-                            <span id="patExam" class="font-bold text-yellow-400 text-lg">Carregando...</span>
-                        </div>
+            <!-- PAINEL DE CONTROLO -->
+            <div class="lg:col-span-3 space-y-4">
+                <div class="panel-glass p-5 rounded-2xl shadow-xl">
+                    <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <h2 class="text-xs font-bold text-white uppercase tracking-widest">Protocolo de Aquisição</h2>
                     </div>
-                    <div class="mt-4 bg-blue-900/20 p-3 rounded text-sm text-blue-200">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        <span id="examHint">Dica: Ajuste o kVp para penetração adequada.</span>
-                    </div>
-                </div>
-
-                <!-- 3D VIEW REPRESENTATION -->
-                <div class="control-panel p-4 rounded-lg h-48 flex items-center justify-center relative overflow-hidden bg-black">
-                    <div id="roomVisual" class="relative w-full h-full flex items-center justify-center">
-                        <!-- Simplified Visuals -->
-                        <div id="patientSprite" class="text-6xl text-slate-500 transition-all duration-300">
-                            🧍
-                        </div>
-                        <div id="beamSprite" class="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[50px] border-l-transparent border-r-[50px] border-r-transparent border-t-[100px] border-t-yellow-500 opacity-0 transition-opacity"></div>
-                        
-                        <!-- Barrier Visualization -->
-                        <div id="barrierVisual" class="absolute bottom-0 right-10 w-4 h-32 bg-slate-600 border-2 border-slate-400 hidden">
-                            <div class="w-full h-1/2 bg-blue-300 opacity-30 border-b border-slate-400"></div>
-                        </div>
-                        
-                        <!-- Tech Visual -->
-                        <div id="techSprite" class="absolute bottom-2 right-4 text-4xl transition-all duration-500">
-                            👨‍⚕️
-                        </div>
-                    </div>
-                    <div class="absolute top-2 left-2 text-xs text-slate-500 font-mono">CÂMERA SALA 1</div>
-                </div>
-            </div>
-
-            <!-- RIGHT COLUMN: CONTROLS -->
-            <div class="lg:col-span-2 space-y-4">
-                
-                <!-- Console -->
-                <div class="control-panel p-6 rounded-lg">
-                    <h2 class="text-slate-300 font-bold mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders"></i> Mesa de Comando
-                    </h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- Exposure Factors -->
-                        <div class="space-y-6">
-                            <div>
-                                <div class="flex justify-between mb-1">
-                                    <label class="text-sm font-semibold text-cyan-400">kVp (Penetração)</label>
-                                    <span id="kvpValue" class="font-mono bg-slate-800 px-2 rounded">70</span>
-                                </div>
-                                <input type="range" id="kvpInput" min="40" max="120" value="70" step="5">
-                                <div class="flex justify-between text-xs text-slate-500 mt-1">
-                                    <span>Baixo Contraste</span>
-                                    <span>Alto Contraste</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="flex justify-between mb-1">
-                                    <label class="text-sm font-semibold text-cyan-400">mAs (Quantidade)</label>
-                                    <span id="masValue" class="font-mono bg-slate-800 px-2 rounded">10</span>
-                                </div>
-                                <input type="range" id="masInput" min="1" max="100" value="10" step="1">
-                                <div class="flex justify-between text-xs text-slate-500 mt-1">
-                                    <span>Granulado</span>
-                                    <span>Escuro</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Safety Measures -->
-                        <div class="space-y-4">
-                            <div class="text-sm font-semibold text-green-400 mb-2">Medidas de Proteção</div>
-                            
-                            <label class="flex items-center justify-between bg-slate-800 p-3 rounded cursor-pointer hover:bg-slate-750 transition">
-                                <span class="flex items-center gap-2"><i class="fa-solid fa-bullseye"></i> Colimação (Focar Feixe)</span>
-                                <input type="checkbox" id="collimationCheck" class="w-5 h-5 accent-green-500">
-                            </label>
-
-                            <label class="flex items-center justify-between bg-slate-800 p-3 rounded cursor-pointer hover:bg-slate-750 transition">
-                                <span class="flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Protetor de Tireoide/Gonadal</span>
-                                <input type="checkbox" id="shieldCheck" class="w-5 h-5 accent-green-500">
-                            </label>
-
-                            <div class="bg-slate-800 p-3 rounded">
-                                <span class="block text-sm mb-2 text-slate-400"><i class="fa-solid fa-person-walking-arrow-right"></i> Posicionamento do Técnico</span>
-                                <div class="flex gap-2">
-                                    <button onclick="setPos('inside')" id="btnPosInside" class="flex-1 py-2 text-xs rounded border border-red-900 bg-red-900/20 hover:bg-red-900/40 transition">Ao lado da Mesa</button>
-                                    <button onclick="setPos('behind')" id="btnPosBehind" class="flex-1 py-2 text-xs rounded border border-green-900 bg-green-900/20 hover:bg-green-900/40 transition ring-2 ring-green-500">Atrás do Biombo</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onclick="takeXray()" class="w-full mt-8 bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-900/50 transform hover:scale-[1.01] transition-all flex items-center justify-center gap-3 text-xl">
-                        <i class="fa-solid fa-radiation fa-spin" style="--fa-animation-duration: 3s;"></i>
-                        DISPARAR RAIOS-X
-                    </button>
-                </div>
-            </div>
-        </main>
-
-        <!-- START SCREEN -->
-        <div id="startScreen" class="absolute inset-0 z-50 flex items-center justify-center bg-slate-900">
-            <div class="bg-slate-800 p-8 rounded-xl border border-slate-600 shadow-2xl max-w-lg text-center">
-                <div class="text-6xl text-yellow-500 mb-4"><i class="fa-solid fa-radiation"></i></div>
-                <h1 class="text-3xl font-bold mb-2">Simulador de Radioproteção</h1>
-                <p class="text-slate-400 mb-6">Você é um técnico em radiologia. Sua missão é realizar exames com qualidade diagnóstica aplicando o princípio <strong>ALARA</strong> (As Low As Reasonably Achievable).</p>
-                
-                <div class="text-left bg-slate-900 p-4 rounded mb-6 text-sm space-y-2 border border-slate-700">
-                    <p><i class="fa-solid fa-check text-green-500 mr-2"></i><strong>Objetivo:</strong> Obter boa imagem com a menor dose possível.</p>
-                    <p><i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-2"></i><strong>Cuidado:</strong> Ficar fora do biombo aumenta drasticamente sua dose pessoal.</p>
-                    <p><i class="fa-solid fa-bolt text-blue-500 mr-2"></i><strong>Técnica:</strong> Ajuste kVp e mAs conforme a espessura da região.</p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button onclick="startGame()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transition">
-                        INICIAR TURNO
-                    </button>
-                    <button onclick="downloadGame()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transition border border-slate-500 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-download"></i> BAIXAR JOGO
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- FEEDBACK MODAL -->
-        <div id="feedbackModal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-slate-800 p-1 rounded-xl border border-slate-600 shadow-2xl max-w-2xl w-full m-4">
-                <div class="p-6">
-                    <h2 id="fbTitle" class="text-2xl font-bold mb-4 border-b border-slate-600 pb-2">Resultado do Exame</h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Image Analysis -->
-                        <div class="bg-black p-4 rounded flex items-center justify-center relative">
-                            <div id="xrayResultVisual" class="w-32 h-40 bg-slate-200 rounded opacity-50 filter blur-sm"></div>
-                            <div id="qualityBadge" class="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold uppercase"></div>
-                            <p class="absolute bottom-2 left-2 text-xs text-slate-500">Simulação Imagem</p>
+                    <div class="space-y-6">
+                        <div class="group">
+                            <div class="flex justify-between text-xs mb-1">
+                                <label class="text-slate-300">Tensão (kV)</label>
+                                <span id="kv-display" class="font-mono text-cyan-400 font-bold">120 kV</span>
+                            </div>
+                            <input type="range" id="kv-input" min="80" max="140" step="20" value="120" class="w-full">
                         </div>
 
-                        <!-- Data Analysis -->
-                        <div class="space-y-3">
-                            <div>
-                                <span class="text-xs text-slate-400 uppercase">Qualidade da Imagem</span>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                        <div id="fbQualityBar" class="h-full bg-blue-500"></div>
-                                    </div>
-                                    <span id="fbQualityText" class="text-sm font-bold">0%</span>
-                                </div>
+                        <div class="group">
+                            <div class="flex justify-between text-xs mb-1">
+                                <label class="text-slate-300">Exposição (mAs)</label>
+                                <span id="mas-display" class="font-mono text-cyan-400 font-bold">200 mAs</span>
                             </div>
-                            
-                            <div>
-                                <span class="text-xs text-slate-400 uppercase">Dose no Paciente</span>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                        <div id="fbPatDoseBar" class="h-full bg-red-500"></div>
-                                    </div>
-                                    <span id="fbPatDoseText" class="text-sm font-bold">ALTA</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <span class="text-xs text-slate-400 uppercase">Dose no Técnico (Você)</span>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                        <div id="fbTechDoseBar" class="h-full bg-yellow-500"></div>
-                                    </div>
-                                    <span id="fbTechDoseText" class="text-sm font-bold">0 mSv</span>
-                                </div>
-                            </div>
+                            <input type="range" id="mas-input" min="10" max="600" step="10" value="200" class="w-full">
                         </div>
-                    </div>
 
-                    <div id="fbMessage" class="mt-6 p-3 bg-slate-700 rounded text-sm border-l-4 border-yellow-500">
-                        Análise técnica aqui...
-                    </div>
+                        <div>
+                            <label class="text-xs mb-1 block text-slate-300">Kernel de Reconstrução</label>
+                            <select id="kernel-input" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                                <option value="soft">Soft (Partes Moles)</option>
+                                <option value="standard" selected>Standard (Intermédio)</option>
+                                <option value="bone">Sharp (Ósseo/Alta Resol.)</option>
+                            </select>
+                        </div>
 
-                    <div class="mt-6 flex justify-end">
-                        <button onclick="nextTurn()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded transition">
-                            Próximo Paciente <i class="fa-solid fa-arrow-right ml-2"></i>
+                        <button id="btn-scan" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all transform active:scale-95 shadow-lg shadow-cyan-900/40 uppercase text-sm tracking-widest">
+                            Confirmar Exposição
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- GAME OVER SCREEN -->
-        <div id="gameOverScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-black hidden">
-             <div class="text-center p-8 max-w-lg">
-                <div id="goIcon" class="text-6xl mb-4 text-green-500"><i class="fa-solid fa-clipboard-check"></i></div>
-                <h2 id="goTitle" class="text-4xl font-bold mb-2">Turno Finalizado</h2>
-                <p id="goMessage" class="text-slate-400 mb-8">Resumo do seu desempenho.</p>
-                <div class="grid grid-cols-2 gap-4 mb-8 text-left">
-                    <div class="bg-slate-900 p-4 rounded border border-slate-800">
-                        <div class="text-xs text-slate-500">PONTUAÇÃO FINAL</div>
-                        <div id="finalScore" class="text-2xl font-mono text-yellow-400 font-bold">0</div>
-                    </div>
-                    <div class="bg-slate-900 p-4 rounded border border-slate-800">
-                        <div class="text-xs text-slate-500">DOSE ACUMULADA</div>
-                        <div id="finalDose" class="text-2xl font-mono text-green-400 font-bold">0 mSv</div>
+
+                <div class="panel-glass p-5 rounded-2xl">
+                    <h2 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Ajuste de Visualização (DICOM)</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <label>Window Width (WW)</label>
+                                <span id="ww-display" class="text-cyan-500 font-bold">400</span>
+                            </div>
+                            <input type="range" id="ww-input" min="50" max="2500" value="400" class="w-full h-1">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <label>Window Level (WL)</label>
+                                <span id="wl-display" class="text-cyan-500 font-bold">40</span>
+                            </div>
+                            <input type="range" id="wl-input" min="-600" max="900" value="40" class="w-full h-1">
+                        </div>
                     </div>
                 </div>
-                <button onclick="location.reload()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded border border-slate-500">
-                    Jogar Novamente
-                </button>
+            </div>
+
+            <!-- SIMULAÇÃO DO GANTRY -->
+            <div class="lg:col-span-5 flex flex-col items-center justify-center space-y-6 bg-slate-900/30 rounded-3xl p-4 border border-slate-800/50">
+                <div class="gantry-ring" id="gantry-visual">
+                    <div class="tube-rotation-wrapper absolute inset-0">
+                        <div class="tube">
+                            <div class="xray-cone"></div>
+                        </div>
+                    </div>
+                    <!-- Fantoma/Paciente -->
+                    <div class="relative z-10 w-36 h-36 bg-slate-800 rounded-full flex flex-col items-center justify-center border-4 border-slate-700 shadow-2xl">
+                         <div class="text-[9px] text-cyan-500/50 font-black tracking-tighter mb-1 uppercase">Objecto de Teste</div>
+                         <div class="w-20 h-1 bg-cyan-500/20 rounded-full animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div class="w-full grid grid-cols-3 gap-3">
+                    <div class="panel-glass p-3 rounded-xl border-t-2 border-yellow-500/50 text-center">
+                        <p class="text-[9px] text-slate-500 uppercase font-bold">CTDIvol Estimado</p>
+                        <p id="stat-dose" class="text-xl font-mono font-bold text-yellow-500">0.00 <span class="text-[10px]">mGy</span></p>
+                    </div>
+                    <div class="panel-glass p-3 rounded-xl border-t-2 border-cyan-500/50 text-center">
+                        <p class="text-[9px] text-slate-500 uppercase font-bold">Ruído (SD)</p>
+                        <p id="stat-noise" class="text-xl font-mono font-bold text-cyan-400">0.0 <span class="text-[10px]">HU</span></p>
+                    </div>
+                    <div class="panel-glass p-3 rounded-xl border-t-2 border-emerald-500/50 text-center">
+                        <p class="text-[9px] text-slate-500 uppercase font-bold">Rácio CNR</p>
+                        <p id="stat-cnr" class="text-xl font-mono font-bold text-emerald-400">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONSOLA DE DIAGNÓSTICO -->
+            <div class="lg:col-span-4 flex flex-col space-y-4">
+                <div class="monitor-screen aspect-square overflow-hidden border-2 border-slate-800">
+                    <canvas id="view-canvas" width="512" height="512" class="w-full h-full"></canvas>
+                    <div id="scan-overlay" class="absolute inset-0 bg-black/90 flex items-center justify-center hidden">
+                        <div class="text-center">
+                            <div class="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p class="text-cyan-500 font-mono text-[10px] tracking-[0.2em] uppercase">A processar dados brutos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="diagnostic-report" class="panel-glass p-5 rounded-2xl flex-grow border-l-4 border-cyan-600">
+                    <h3 class="text-xs font-black text-cyan-500 mb-3 uppercase tracking-widest">Relatório Técnico de Física</h3>
+                    <div id="report-text" class="text-xs leading-relaxed text-slate-400 font-medium">
+                        Sistema operacional. Introduza os parâmetros de feixe (kV e mAs) para iniciar a reconstrução volumétrica da secção axial.
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
 
     <script>
-        // --- GAME STATE & CONFIG ---
-        const GAME_CONFIG = {
-            maxDose: 20.0, // mSv anual limit simulation scaled down
-            totalTurns: 5
-        };
+        const canvas = document.getElementById('view-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Controlos
+        const kvInput = document.getElementById('kv-input');
+        const masInput = document.getElementById('mas-input');
+        const kernelInput = document.getElementById('kernel-input');
+        const wwInput = document.getElementById('ww-input');
+        const wlInput = document.getElementById('wl-input');
+        const btnScan = document.getElementById('btn-scan');
+        const overlay = document.getElementById('scan-overlay');
+        const safetyBar = document.getElementById('safety-bar');
 
-        const EXAMS = [
-            {
-                id: 'chest',
-                name: 'Tórax (PA)',
-                bodyType: 'Adulto Médio',
-                idealKvp: 110, // High kVp for lung details
-                idealMas: 5,   // Low mAs
-                collimationRequired: true,
-                shieldRequired: false, // Generally not used in chest to avoid obscuring
-                description: 'Necessita alta penetração para ver através das costelas, mas baixo mAs para parar movimento.'
-            },
-            {
-                id: 'hand',
-                name: 'Mão (Obíqua)',
-                bodyType: 'Adulto',
-                idealKvp: 55,  // Low kVp for bone detail
-                idealMas: 3,   // Very low mAs
-                collimationRequired: true,
-                shieldRequired: true, // Lap shield
-                description: 'Estrutura fina. Alta exigência de detalhe ósseo. Baixo kVp.'
-            },
-            {
-                id: 'lumbar',
-                name: 'Coluna Lombar (Perfil)',
-                bodyType: 'Adulto Robusto',
-                idealKvp: 90,
-                idealMas: 40,  // High mAs needed for thick part
-                collimationRequired: true,
-                shieldRequired: true, // Gonadal shielding crucial if possible
-                description: 'Região espessa. Requer dose alta para atravessar. A dispersão será alta.'
-            },
-            {
-                id: 'pediatric_chest',
-                name: 'Tórax Pediátrico',
-                bodyType: 'Criança (5 anos)',
-                idealKvp: 70,
-                idealMas: 2,
-                collimationRequired: true,
-                shieldRequired: true,
-                description: 'Tecidos muito radiossensíveis. Use tempo mínimo e proteção máxima.'
-            }
-        ];
+        // Estado Global
+        let currentImageBuffer = null;
+        let pathologyActive = Math.random() > 0.3; 
+        let pathologyPos = { x: 160 + (Math.random()*20), y: 140 + (Math.random()*20) };
 
-        let state = {
-            turn: 1,
-            score: 0,
-            cumulativeDose: 0,
-            currentExam: null,
-            techPosition: 'behind' // 'behind' or 'inside'
-        };
-
-        // --- DOM ELEMENTS ---
-        const els = {
-            kvpInput: document.getElementById('kvpInput'),
-            kvpValue: document.getElementById('kvpValue'),
-            masInput: document.getElementById('masInput'),
-            masValue: document.getElementById('masValue'),
-            collimation: document.getElementById('collimationCheck'),
-            shield: document.getElementById('shieldCheck'),
-            startScreen: document.getElementById('startScreen'),
-            gameScreen: document.getElementById('gameScreen'),
-            feedbackModal: document.getElementById('feedbackModal'),
-            patName: document.getElementById('patName'),
-            patBody: document.getElementById('patBody'),
-            patExam: document.getElementById('patExam'),
-            examHint: document.getElementById('examHint'),
-            doseMeter: document.getElementById('doseMeter'),
-            doseValue: document.getElementById('doseValue'),
-            scoreValue: document.getElementById('scoreValue'),
-            turnValue: document.getElementById('turnValue'),
-            btnInside: document.getElementById('btnPosInside'),
-            btnBehind: document.getElementById('btnPosBehind'),
-            techSprite: document.getElementById('techSprite'),
-            barrierVisual: document.getElementById('barrierVisual')
-        };
-
-        // --- INITIALIZATION ---
-        els.kvpInput.addEventListener('input', (e) => els.kvpValue.innerText = e.target.value);
-        els.masInput.addEventListener('input', (e) => els.masValue.innerText = e.target.value);
-
-        function startGame() {
-            state.score = 0;
-            state.cumulativeDose = 0;
-            state.turn = 1;
+        function updateUI() {
+            document.getElementById('kv-display').innerText = kvInput.value + ' kV';
+            document.getElementById('mas-display').innerText = masInput.value + ' mAs';
+            document.getElementById('ww-display').innerText = wwInput.value;
+            document.getElementById('wl-display').innerText = wlInput.value;
             
-            els.startScreen.classList.add('hidden');
-            els.gameScreen.classList.remove('hidden');
-            updateHUD();
-            loadTurn();
+            if (currentImageBuffer) renderWithWindowing();
         }
 
-        function loadTurn() {
-            // Pick a random exam logic or sequential
-            const examIndex = (state.turn - 1) % EXAMS.length; 
-            // Or random: Math.floor(Math.random() * EXAMS.length);
-            
-            state.currentExam = EXAMS[Math.floor(Math.random() * EXAMS.length)];
-            
-            // Generate Random Patient Name
-            const names = ["João Silva", "Maria Santos", "Pedro Oliveira", "Ana Costa", "Lucas Pereira"];
-            const randomName = names[Math.floor(Math.random() * names.length)];
+        kvInput.oninput = updateUI;
+        masInput.oninput = updateUI;
+        wwInput.oninput = updateUI;
+        wlInput.oninput = updateUI;
+        kernelInput.onchange = updateUI;
 
-            // UI Updates
-            els.patName.innerText = randomName;
-            els.patBody.innerText = state.currentExam.bodyType;
-            els.patExam.innerText = state.currentExam.name;
-            els.examHint.innerText = `Dica Clínica: ${state.currentExam.description}`;
-            
-            // Reset Controls
-            els.kvpInput.value = 70; els.kvpValue.innerText = "70";
-            els.masInput.value = 10; els.masValue.innerText = "10";
-            els.collimation.checked = false;
-            els.shield.checked = false;
-            setPos('behind');
-        }
+        function startScan() {
+            btnScan.disabled = true;
+            document.getElementById('gantry-visual').classList.add('scanning');
+            overlay.classList.remove('hidden');
 
-        function setPos(pos) {
-            state.techPosition = pos;
-            if(pos === 'behind') {
-                els.btnBehind.classList.add('ring-2', 'ring-green-500');
-                els.btnInside.classList.remove('ring-2', 'ring-red-500');
-                
-                // Visual Update
-                els.techSprite.style.right = "10px";
-                els.techSprite.style.opacity = "0.5"; // Behind glass
-                els.barrierVisual.classList.remove('hidden');
-            } else {
-                els.btnBehind.classList.remove('ring-2', 'ring-green-500');
-                els.btnInside.classList.add('ring-2', 'ring-red-500');
-                
-                // Visual Update
-                els.techSprite.style.right = "150px"; // Near patient
-                els.techSprite.style.opacity = "1";
-                els.barrierVisual.classList.add('hidden');
-            }
-        }
-
-        // --- CORE LOGIC ---
-        function takeXray() {
-            const userKvp = parseInt(els.kvpInput.value);
-            const userMas = parseInt(els.masInput.value);
-            const idealKvp = state.currentExam.idealKvp;
-            const idealMas = state.currentExam.idealMas;
-
-            // 1. Calculate Image Quality (Distance from ideal parameters)
-            // Percentage difference. Closer to 0 is better.
-            const kvpDiff = Math.abs(userKvp - idealKvp) / idealKvp;
-            const masDiff = Math.abs(userMas - idealMas) / idealMas;
-            
-            // Weighted error: kVp affects contrast heavily, mAs affects noise/density
-            let qualityScore = 100 - (kvpDiff * 100) - (masDiff * 50);
-            
-            // Penalize massive mAs underexposure (grainy image)
-            if(userMas < idealMas * 0.5) qualityScore -= 30;
-            // Penalize massive Overexposure (black image)
-            if(userMas > idealMas * 2) qualityScore -= 20;
-
-            if (qualityScore < 0) qualityScore = 0;
-            if (qualityScore > 100) qualityScore = 100;
-
-            // 2. Calculate Patient Dose (Relative Unit)
-            // Dose roughly proportional to mAs * (kVp)^2. 
-            // We simplify: Base dose is mAs.
-            let patientDoseBase = userMas * (Math.pow(userKvp/70, 2));
-            
-            // Protection modifiers
-            if (els.collimation.checked) patientDoseBase *= 0.7; // Collimation reduces integral dose
-            // Shielding doesn't reduce dose to the part being imaged, but protects others. 
-            // In this game, we treat it as a "Safety Bonus" to score, but we track if they forgot it.
-            
-            let patientDoseStatus = "NORMAL";
-            if(patientDoseBase > (idealMas * (Math.pow(idealKvp/70, 2))) * 1.5) patientDoseStatus = "EXCESSIVA";
-            if(patientDoseBase < (idealMas * (Math.pow(idealKvp/70, 2))) * 0.5) patientDoseStatus = "BAIXA (Ruído)";
-
-            // 3. Calculate Technician Dose (Scatter)
-            // Scatter is roughly 0.1% of patient dose at 1 meter.
-            let scatterIntensity = patientDoseBase * 0.001; 
-
-            // Inverse Square Law & Shielding logic
-            let techReceivedDose = 0;
-            
-            if (state.techPosition === 'behind') {
-                // Lead barrier attenuates ~95-99% depending on kVp. Let's say 98%.
-                techReceivedDose = scatterIntensity * 0.02; 
-            } else {
-                // Standing next to patient (no barrier)
-                // Distance penalty. Assuming they are 0.5m away vs 2m behind barrier?
-                // Let's just multiply base scatter.
-                techReceivedDose = scatterIntensity * 5.0; // Very high relative dose
-                
-                // Wearing lead apron? (We assume shield check applies to patient, 
-                // but let's assume tech forgot their apron if they are inside without protection check)
-                // For simplicity, position is the main factor here.
-            }
-
-            // Normalize tech dose for game display (mSv equivalent for game balance)
-            let displayTechDose = techReceivedDose * 10; 
-            
-            processResult(qualityScore, patientDoseStatus, displayTechDose);
-        }
-
-        function processResult(quality, patDoseStatus, techDose) {
-            // Update State
-            state.cumulativeDose += techDose;
-            
-            // Calculate Points for this turn
-            let turnPoints = Math.floor(quality);
-            
-            // Penalties
-            if (patDoseStatus === "EXCESSIVA") turnPoints -= 20;
-            if (state.currentExam.shieldRequired && !els.shield.checked) turnPoints -= 15;
-            if (state.currentExam.collimationRequired && !els.collimation.checked) turnPoints -= 10;
-            if (techDose > 0.5) turnPoints -= 40; // Severe penalty for unsafe tech behavior
-
-            if (turnPoints < 0) turnPoints = 0;
-            state.score += turnPoints;
-
-            // Trigger Animation
-            const beam = document.getElementById('beamSprite');
-            beam.style.opacity = 1;
-            document.getElementById('app').classList.add('radiation-flash');
-            
             setTimeout(() => {
-                beam.style.opacity = 0;
-                document.getElementById('app').classList.remove('radiation-flash');
-                showFeedback(quality, patDoseStatus, techDose, turnPoints);
-            }, 600);
+                document.getElementById('gantry-visual').classList.remove('scanning');
+                overlay.classList.add('hidden');
+                btnScan.disabled = false;
+                calculatePhysics();
+            }, 1500);
         }
 
-        function showFeedback(quality, patDoseStatus, techDose, points) {
-            const modal = els.feedbackModal;
-            const msgBox = document.getElementById('fbMessage');
-            
-            // Visuals
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.remove('opacity-0'), 10);
-            
-            document.getElementById('fbQualityBar').style.width = `${quality}%`;
-            document.getElementById('fbQualityText').innerText = `${Math.floor(quality)}%`;
-            
-            document.getElementById('fbPatDoseText').innerText = patDoseStatus;
-            document.getElementById('fbTechDoseText').innerText = `${techDose.toFixed(3)} mSv`;
-            
-            // Determine Message
-            let messages = [];
-            let msgType = 'neutral'; // neutral, success, danger
+        function calculatePhysics() {
+            const kv = parseInt(kvInput.value);
+            const mas = parseInt(masInput.value);
+            const kernel = kernelInput.value;
 
-            // Quality feedback
-            if(quality > 85) messages.push("Excelente qualidade de imagem.");
-            else if(quality < 50) messages.push("Imagem sem valor diagnóstico (fator de exposição incorreto).");
-            else messages.push("Qualidade de imagem aceitável, mas pode melhorar.");
+            // 1. DOSE (CTDIvol) - Modelo simplificado
+            const dose = (mas * Math.pow(kv/100, 2) * 0.08).toFixed(2);
+            document.getElementById('stat-dose').innerText = `${dose} mGy`;
 
-            // Tech Safety feedback
-            if(state.techPosition === 'inside') {
-                messages.push("⚠️ PERIGO: Você ficou dentro da sala sem barreira! Dose alta recebida.");
-                msgBox.classList.remove('border-yellow-500');
-                msgBox.classList.add('border-red-500', 'text-red-200');
+            // 2. RUÍDO (Desvio Padrão)
+            let noiseBase = 32 / Math.sqrt(mas * (kv/100));
+            if (kernel === 'bone') noiseBase *= 1.9;
+            if (kernel === 'soft') noiseBase *= 0.55;
+            document.getElementById('stat-noise').innerText = noiseBase.toFixed(1) + " HU";
+
+            // 3. CONTRASTE (Variação da Atenuação Linear)
+            const contrastFactor = 1 + (140 - kv) / 55;
+
+            generateHUBuffer(kv, noiseBase, contrastFactor);
+            
+            // Segurança
+            const safety = Math.max(0, 100 - (dose * 2.2));
+            safetyBar.style.width = safety + '%';
+            safetyBar.className = safety < 35 ? 'w-full h-full bg-red-500' : 'w-full h-full bg-cyan-500';
+
+            createReport(dose, noiseBase, kv);
+        }
+
+        function generateHUBuffer(kv, noise, contrast) {
+            const size = 512;
+            const buffer = new Float32Array(size * size);
+            
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const dx = x - 256;
+                    const dy = y - 256;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    let hu = -1000; // Unidades Hounsfield do Ar
+
+                    // Anatomia principal (Círculo de tecido mole ~ 40 HU)
+                    if (dist < 185) hu = 35;
+                    
+                    // Estrutura Óssea (Varia com kV por causa do efeito fotoelétrico)
+                    if (dist > 150 && dist < 175 && dy > 110 && Math.abs(dx) < 45) hu = 750 * contrast;
+
+                    // Órgão Parenquimatoso (Fígado/Baço ~ 60 HU)
+                    const fdx = x - 170;
+                    const fdy = y - 230;
+                    if (Math.sqrt(fdx*fdx + fdy*fdy) < 65) hu = 60 * contrast;
+
+                    // Patologia (Hipodensa ~ 15 HU)
+                    if (pathologyActive) {
+                        const pdx = x - pathologyPos.x;
+                        const pdy = y - pathologyPos.y;
+                        if (Math.sqrt(pdx*pdx + pdy*pdy) < 14) hu = 15;
+                    }
+
+                    // Ruído Quântico Gaussiano (Simulado)
+                    hu += (Math.random() - 0.5) * noise * 7.5;
+
+                    buffer[y * size + x] = hu;
+                }
+            }
+            currentImageBuffer = buffer;
+            renderWithWindowing();
+        }
+
+        function renderWithWindowing() {
+            const size = 512;
+            const imgData = ctx.createImageData(size, size);
+            const ww = parseInt(wwInput.value);
+            const wl = parseInt(wlInput.value);
+
+            const minHU = wl - ww / 2;
+
+            for (let i = 0; i < currentImageBuffer.length; i++) {
+                const hu = currentImageBuffer[i];
+                let gray = ((hu - minHU) / ww) * 255;
+                gray = Math.max(0, Math.min(255, gray));
+
+                const idx = i * 4;
+                imgData.data[idx] = gray;
+                imgData.data[idx + 1] = gray;
+                imgData.data[idx + 2] = gray;
+                imgData.data[idx + 3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            // Dados DICOM sobrepostos
+            ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+            ctx.font = "12px 'Courier New', monospace";
+            ctx.fillText(`W: ${ww} L: ${wl}`, 15, 495);
+        }
+
+        function createReport(dose, noise, kv) {
+            const report = document.getElementById('report-text');
+            const cnr = (45 / noise).toFixed(2);
+            document.getElementById('stat-cnr').innerText = cnr;
+
+            let html = `<div class="space-y-2">`;
+            html += `<p><b>Análise do Espectro:</b> À energia de ${kv} kV, a interação dominante nos tecidos é o efeito Compton, com componente fotoelétrico ${kv < 100 ? 'elevado' : 'reduzido'} no osso.</p>`;
+            
+            if (dose > 22) {
+                html += `<p class="text-red-400 font-bold border-l-2 border-red-500 pl-2 italic">AVISO: Dose acima do DRL sugerido. Risco estocástico desnecessário.</p>`;
             } else {
-                messages.push("✅ Bom posicionamento atrás do biombo.");
+                html += `<p class="text-cyan-400">STATUS: Conformidade ALARA validada. Dose de ${dose} mGy adequada.</p>`;
             }
 
-            // PPE Feedback
-            if(state.currentExam.shieldRequired && !els.shield.checked) {
-                messages.push("❌ Erro: Esqueceu a proteção de chumbo no paciente.");
-            }
-
-            msgBox.innerHTML = `<strong>Pontos: +${points}</strong><br>` + messages.join("<br>");
-
-            // Visual XRay Result
-            const xVisual = document.getElementById('xrayResultVisual');
-            const badge = document.getElementById('qualityBadge');
-            
-            if(quality > 80) {
-                xVisual.style.backgroundColor = "#e2e8f0"; // Good bone
-                xVisual.style.opacity = "0.8";
-                badge.innerText = "OK";
-                badge.className = "absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold uppercase bg-green-500 text-white";
-            } else if (patDoseStatus === "EXCESSIVA") {
-                xVisual.style.backgroundColor = "#000"; // Burnt
-                xVisual.style.opacity = "0.9";
-                badge.innerText = "Escura";
-                badge.className = "absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold uppercase bg-black text-white border border-white";
+            if (noise > 9) {
+                html += `<p class="text-amber-500 font-bold mt-2">ALERTA TÉCNICO: Ruído quântico excessivo está a degradar a detetabilidade de baixo contraste (CNR ${cnr}).</p>`;
             } else {
-                xVisual.style.backgroundColor = "#fff"; // Washed out
-                xVisual.style.opacity = "0.2";
-                badge.innerText = "Clara";
-                badge.className = "absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold uppercase bg-white text-black";
+                html += `<p class="text-emerald-400 mt-2 font-bold">QUALIDADE: Rácio Contraste-Ruído (${cnr}) otimizado para diagnóstico de tecidos moles.</p>`;
             }
-        }
 
-        function nextTurn() {
-            // Hide Modal
-            els.feedbackModal.classList.add('opacity-0');
-            setTimeout(() => els.feedbackModal.classList.add('hidden'), 300);
-
-            // Update Global Stats
-            updateHUD();
-
-            state.turn++;
-            if(state.turn > GAME_CONFIG.totalTurns || state.cumulativeDose > 10.0) {
-                endGame();
-            } else {
-                loadTurn();
+            if (pathologyActive && noise < 6.5) {
+                html += `<p class="mt-3 bg-cyan-900/50 p-2 rounded text-white animate-pulse">🎯 ACHADO POSSÍVEL: Suspeita de lesão hipodensa focal em parênquima glandular. Ajuste WW/WL para confirmar.</p>`;
+            } else if (pathologyActive && noise >= 6.5) {
+                html += `<p class="mt-3 text-slate-500 italic">Nota: A textura de ruído atual impede a exclusão de micro-patologias focais.</p>`;
             }
+
+            html += `</div>`;
+            report.innerHTML = html;
         }
 
-        function updateHUD() {
-            els.scoreValue.innerText = state.score;
-            els.doseValue.innerText = state.cumulativeDose.toFixed(3) + " mSv";
-            els.turnValue.innerText = `${state.turn}/${GAME_CONFIG.totalTurns}`;
-            
-            // Meter color logic
-            const dosePercent = (state.cumulativeDose / GAME_CONFIG.maxDose) * 100;
-            els.doseMeter.style.width = `${Math.min(dosePercent, 100)}%`;
-            
-            if(state.cumulativeDose > 2) els.doseMeter.className = "h-full bg-yellow-500 meter-bar";
-            if(state.cumulativeDose > 5) els.doseMeter.className = "h-full bg-red-600 meter-bar animate-pulse";
-        }
-
-        function downloadGame() {
-            // Cria um blob com o conteúdo atual do HTML
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            // Cria um link temporário para download
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'RadSim_Radiologia.html';
-            document.body.appendChild(a);
-            a.click();
-            
-            // Limpa o link
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function endGame() {
-            const goScreen = document.getElementById('gameOverScreen');
-            const goTitle = document.getElementById('goTitle');
-            const goMsg = document.getElementById('goMessage');
-            const goIcon = document.getElementById('goIcon');
-
-            goScreen.classList.remove('hidden');
-            
-            document.getElementById('finalScore').innerText = state.score;
-            document.getElementById('finalDose').innerText = state.cumulativeDose.toFixed(3) + " mSv";
-
-            if (state.cumulativeDose > 5.0) {
-                goTitle.innerText = "Afastado por Radiodermite!";
-                goTitle.classList.add('text-red-500');
-                goMsg.innerText = "Você ultrapassou os limites seguros de radiação ocupacional. Lembre-se: Tempo, Distância e Blindagem.";
-                goIcon.innerHTML = '<i class="fa-solid fa-skull-crossbones"></i>';
-                goIcon.classList.replace('text-green-500', 'text-red-600');
-            } else if (state.score > 350) {
-                goTitle.innerText = "Excelente Técnico!";
-                goTitle.classList.add('text-green-400');
-                goMsg.innerText = "Você aplicou os princípios ALARA com perfeição. Imagens ótimas e dose baixa.";
-            } else {
-                goTitle.innerText = "Turno Concluído";
-                goTitle.classList.add('text-yellow-400');
-                goMsg.innerText = "Você terminou o trabalho, mas precisa revisar os protocolos de exposição e proteção.";
-                goIcon.innerHTML = '<i class="fa-solid fa-user-doctor"></i>';
-                goIcon.classList.replace('text-green-500', 'text-yellow-500');
-            }
-        }
+        btnScan.onclick = startScan;
+        
+        // Setup Inicial
+        ctx.fillStyle = "black";
+        ctx.fillRect(0,0,512,512);
+        updateUI();
 
     </script>
 </body>
